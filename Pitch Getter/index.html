@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pitch Identifier</title>
+</head>
+<style>
+    #semicircle {
+
+
+        border-top: 10px solid transparent;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+
+
+        background:
+            linear-gradient(#ffffff, #ffffff) padding-box,
+
+            radial-gradient(circle at top center, #3ce18b, #3f3c6b, #ea3c50) border-box;
+        width: 100px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        border-radius: 75px 75px 0 0;
+    }
+
+    #pointer {
+        position: relative;
+        justify-content: center;
+        background-color: greenyellow;
+        width: 10px;
+        height: 100%;
+        z-index: 1;
+
+        transform-origin: bottom center;
+
+        border-radius: 100% 100% 10px 10px;
+
+    }
+
+
+
+    #exampleScale {
+        height: 500px;
+        width: 50%;
+        position: relative;
+        display: grid;
+        grid-template-rows: repeat(11, 1fr);
+        background-color: #3f3c6b;
+    }
+
+    #noteDot {
+        height: 50px;
+        width: 50px;
+        background-color: white;
+        border-radius: 100%;
+        top: calc((var(--position) + 5) * 100% / 6);
+        color: white;
+        position: absolute;
+
+
+    }
+
+    .line {
+        border-top: 1px solid black;
+    }
+</style>
+
+<body>
+    <h1>Identify this pitch</h1>
+
+    <button id="startMic">Start!</button>
+    <button id="stopMic" disabled>End!</button>
+
+    <h2 id="frequency">Frequency: -- Hz</h2>
+    <h2 id="note">Note: --</h2>
+    <p id="status">Microphone is off.</p>
+    <p id="rotationNumber"></p>
+
+
+    <div id="semicircle">
+        <div id="pointer">
+        </div>
+    </div>
+
+    <div id="exampleScale">
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class=""></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+
+        <div id="noteDot">
+
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let microphoneStream;
+        let animationId;
+
+        let rotationAmount;
+
+        let middleC = 60
+
+        const noteList = ["C", "C#,Db", "D", "D#,Eb", "E", "F", "F#,Gb", "G", "G#,Ab", "A", "A#/Bb", "B"]
+
+        const startBtn = document.querySelector("#startMic");
+        const stopBtn = document.querySelector("#stopMic");
+        const frequencyDisplay = document.querySelector("#frequency");
+        const noteDisplay = document.querySelector("#note");
+        const statusDisplay = document.querySelector("#status");
+        const rotationNumber = document.querySelector("#rotationNumber");
+        const pointer = document.getElementById("pointer");
+        const noteShower = document.getElementById("noteDot");
+
+        startBtn.addEventListener("click", useMic);
+        stopBtn.addEventListener("click", stopMic);
+
+        async function useMic() {
+            try {
+                // Ask for microphone permission.
+                microphoneStream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true
+                    });
+
+                // Create the audio processing system.
+                audioContext = new AudioContext();
+                await audioContext.resume();
+
+                // Connect microphone to the analyser.
+                const source =
+                    audioContext.createMediaStreamSource(
+                        microphoneStream
+                    );
+
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 4096;
+
+                source.connect(analyser);
+
+                // Store microphone samples here.
+                const samples =
+                    new Float32Array(analyser.fftSize);
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusDisplay.textContent = "Listening...";
+
+                // Keep measuring the frequency.
+                function update() {
+                    analyser.getFloatTimeDomainData(samples);
+
+                    const frequency = detectPitch(
+                        samples,
+                        audioContext.sampleRate
+                    );
+
+                    //DELETE WHEN NOT TESTING!
+                    //let pitchName = (69 + 12 * Math.log2(261.625565 / 440))
+
+                    let pitchName = (69 + 12 * Math.log2(frequency / 440))
+                    let closestPitchName = ((Math.round(pitchName) % 12));
+
+                    let offBy = ((pitchName - (Math.round(pitchName))).toFixed(2))
+
+
+                    // doesnt accoutn for flats or sharps
+                    let pitchNumber = middleC - pitchName
+
+
+                    // make sure the list starts at c, the math here is correct but doing a silly undefined
+                    //                    let pitchName = (69 + 12 * Math.log2(frequency / 440))
+                    //let closestPitchName = Math.round(pitchName) - 1 % 12 + 1
+
+                    if (frequency !== null) {
+                        frequencyDisplay.textContent =
+                            `Frequency: ${frequency.toFixed(1)} Hz`;
+                        noteDisplay.textContent =
+                            `Note: ${noteList[closestPitchName]} Off By: ${offBy}`;
+                        rotationAmount = Math.round(pitchName) - pitchName;
+
+                        pointer.style.transform = `rotate(${offBy * 180}deg)`;
+
+                        noteShower.style.setProperty("--position", pitchNumber);
+
+
+                    } else {
+                        frequencyDisplay.textContent =
+                            "Frequency: -- Hz";
+                        noteDisplay.textContent =
+                            "Note: --";
+                        rotationNumber.textContent = "ROTATION BAYBE";
+                        pointer.style.transform = `rotate(${0}deg)`;
+
+
+                    }
+
+                    animationId = requestAnimationFrame(update);
+                }
+
+                update();
+
+            } catch (error) {
+                statusDisplay.textContent =
+                    "Microphone error: " + error.message;
+            }
+        }
+
+        function detectPitch(samples, sampleRate) {
+            const size = samples.length;
+
+            // Reject silence or very quiet sounds.
+            let energy = 0;
+
+            for (let i = 0; i < size; i++) {
+                energy += samples[i] * samples[i];
+            }
+
+            const rms = Math.sqrt(energy / size);
+
+            if (rms < 0.01) {
+                return null;
+            }
+
+            // Search for pitches from 70 to 1000 Hz.
+            const minFrequency = 70;
+            const maxFrequency = 1000;
+
+            const minLag = Math.floor(
+                sampleRate / maxFrequency
+            );
+
+            const maxLag = Math.min(
+                Math.floor(sampleRate / minFrequency),
+                Math.floor(size / 2)
+            );
+
+            const correlations =
+                new Float32Array(maxLag + 1);
+
+            // Reference score: compare the signal with itself.
+            for (let i = 0; i < size; i++) {
+                correlations[0] += samples[i] * samples[i];
+            }
+
+            // Compare the signal with shifted copies.
+            for (let lag = minLag; lag <= maxLag; lag++) {
+                let sum = 0;
+                let count = 0;
+
+                for (let i = 0; i < size - lag; i++) {
+                    sum += samples[i] * samples[i + lag];
+                    count++;
+                }
+
+                correlations[lag] = sum / count;
+            }
+
+            // Find a peak in the similarity scores.
+            for (
+                let lag = minLag + 1;
+                lag < maxLag;
+                lag++
+            ) {
+                const isPeak =
+                    correlations[lag] > correlations[lag - 1] &&
+                    correlations[lag] >= correlations[lag + 1];
+
+                if (!isPeak) {
+                    continue;
+                }
+
+                const confidence =
+                    correlations[lag] /
+                    (correlations[0] / size);
+
+                if (confidence < 0.3) {
+                    continue;
+                }
+
+                // Convert the repeating period into Hz.
+                return sampleRate / lag;
+            }
+
+            return null;
+        }
+
+        function stopMic() {
+            cancelAnimationFrame(animationId);
+
+            if (microphoneStream) {
+                microphoneStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+
+                microphoneStream = null;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            frequencyDisplay.textContent = "Frequency: -- Hz";
+            noteDisplay.textContent = "Note: --";
+            statusDisplay.textContent = "Microphone is off.";
+        }
+    </script>
+</body>
+
+</html>
