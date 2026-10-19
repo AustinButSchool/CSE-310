@@ -1,325 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pitch Identifier</title>
-</head>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pitch Getter</title>
 <style>
-    #semicircle {
-
-
-        border-top: 10px solid transparent;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-
-
-        background:
-            linear-gradient(#ffffff, #ffffff) padding-box,
-
-            radial-gradient(circle at top center, #3ce18b, #3f3c6b, #ea3c50) border-box;
-        width: 100px;
-        height: 50px;
-        display: flex;
-        justify-content: center;
-        border-radius: 75px 75px 0 0;
-    }
-
-    #pointer {
-        position: relative;
-        justify-content: center;
-        background-color: greenyellow;
-        width: 10px;
-        height: 100%;
-        z-index: 1;
-
-        transform-origin: bottom center;
-
-        border-radius: 100% 100% 10px 10px;
-
-    }
-
-
-
-    #exampleScale {
-        height: 500px;
-        width: 50%;
-        position: relative;
-        display: grid;
-        grid-template-rows: repeat(11, 1fr);
-        background-color: #3f3c6b;
-    }
-
-    #noteDot {
-        height: 50px;
-        width: 50px;
-        background-color: white;
-        border-radius: 100%;
-        top: calc((var(--position) + 5) * 100% / 6);
-        color: white;
-        position: absolute;
-
-
-    }
-
-    .line {
-        border-top: 1px solid black;
-    }
-</style>
-
-<body>
-    <h1>Identify this pitch</h1>
-
-    <button id="startMic">Start!</button>
-    <button id="stopMic" disabled>End!</button>
-
-    <h2 id="frequency">Frequency: -- Hz</h2>
-    <h2 id="note">Note: --</h2>
-    <p id="status">Microphone is off.</p>
-    <p id="rotationNumber"></p>
-
-
-    <div id="semicircle">
-        <div id="pointer">
-        </div>
-    </div>
-
-    <div id="exampleScale">
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class=""></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-
-        <div id="noteDot">
-
-        </div>
-    </div>
-
-    <script>
-        let audioContext;
-        let microphoneStream;
-        let animationId;
-
-        let rotationAmount;
-
-        let middleC = 60
-
-        const noteList = ["C", "C#,Db", "D", "D#,Eb", "E", "F", "F#,Gb", "G", "G#,Ab", "A", "A#/Bb", "B"]
-
-        const startBtn = document.querySelector("#startMic");
-        const stopBtn = document.querySelector("#stopMic");
-        const frequencyDisplay = document.querySelector("#frequency");
-        const noteDisplay = document.querySelector("#note");
-        const statusDisplay = document.querySelector("#status");
-        const rotationNumber = document.querySelector("#rotationNumber");
-        const pointer = document.getElementById("pointer");
-        const noteShower = document.getElementById("noteDot");
-
-        startBtn.addEventListener("click", useMic);
-        stopBtn.addEventListener("click", stopMic);
-
-        async function useMic() {
-            try {
-                // Ask for microphone permission.
-                microphoneStream =
-                    await navigator.mediaDevices.getUserMedia({
-                        audio: true
-                    });
-
-                // Create the audio processing system.
-                audioContext = new AudioContext();
-                await audioContext.resume();
-
-                // Connect microphone to the analyser.
-                const source =
-                    audioContext.createMediaStreamSource(
-                        microphoneStream
-                    );
-
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 4096;
-
-                source.connect(analyser);
-
-                // Store microphone samples here.
-                const samples =
-                    new Float32Array(analyser.fftSize);
-
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                statusDisplay.textContent = "Listening...";
-
-                // Keep measuring the frequency.
-                function update() {
-                    analyser.getFloatTimeDomainData(samples);
-
-                    const frequency = detectPitch(
-                        samples,
-                        audioContext.sampleRate
-                    );
-
-                    //DELETE WHEN NOT TESTING!
-                    //let pitchName = (69 + 12 * Math.log2(261.625565 / 440))
-
-                    let pitchName = (69 + 12 * Math.log2(frequency / 440))
-                    let closestPitchName = ((Math.round(pitchName) % 12));
-
-                    let offBy = ((pitchName - (Math.round(pitchName))).toFixed(2))
-
-
-                    // doesnt accoutn for flats or sharps
-                    let pitchNumber = middleC - pitchName
-
-
-                    // make sure the list starts at c, the math here is correct but doing a silly undefined
-                    //                    let pitchName = (69 + 12 * Math.log2(frequency / 440))
-                    //let closestPitchName = Math.round(pitchName) - 1 % 12 + 1
-
-                    if (frequency !== null) {
-                        frequencyDisplay.textContent =
-                            `Frequency: ${frequency.toFixed(1)} Hz`;
-                        noteDisplay.textContent =
-                            `Note: ${noteList[closestPitchName]} Off By: ${offBy}`;
-                        rotationAmount = Math.round(pitchName) - pitchName;
-
-                        pointer.style.transform = `rotate(${offBy * 180}deg)`;
-
-                        noteShower.style.setProperty("--position", pitchNumber);
-
-
-                    } else {
-                        frequencyDisplay.textContent =
-                            "Frequency: -- Hz";
-                        noteDisplay.textContent =
-                            "Note: --";
-                        rotationNumber.textContent = "ROTATION BAYBE";
-                        pointer.style.transform = `rotate(${0}deg)`;
-
-
-                    }
-
-                    animationId = requestAnimationFrame(update);
-                }
-
-                update();
-
-            } catch (error) {
-                statusDisplay.textContent =
-                    "Microphone error: " + error.message;
-            }
-        }
-
-        function detectPitch(samples, sampleRate) {
-            const size = samples.length;
-
-            // Reject silence or very quiet sounds.
-            let energy = 0;
-
-            for (let i = 0; i < size; i++) {
-                energy += samples[i] * samples[i];
-            }
-
-            const rms = Math.sqrt(energy / size);
-
-            if (rms < 0.01) {
-                return null;
-            }
-
-            // Search for pitches from 70 to 1000 Hz.
-            const minFrequency = 70;
-            const maxFrequency = 1000;
-
-            const minLag = Math.floor(
-                sampleRate / maxFrequency
-            );
-
-            const maxLag = Math.min(
-                Math.floor(sampleRate / minFrequency),
-                Math.floor(size / 2)
-            );
-
-            const correlations =
-                new Float32Array(maxLag + 1);
-
-            // Reference score: compare the signal with itself.
-            for (let i = 0; i < size; i++) {
-                correlations[0] += samples[i] * samples[i];
-            }
-
-            // Compare the signal with shifted copies.
-            for (let lag = minLag; lag <= maxLag; lag++) {
-                let sum = 0;
-                let count = 0;
-
-                for (let i = 0; i < size - lag; i++) {
-                    sum += samples[i] * samples[i + lag];
-                    count++;
-                }
-
-                correlations[lag] = sum / count;
-            }
-
-            // Find a peak in the similarity scores.
-            for (
-                let lag = minLag + 1;
-                lag < maxLag;
-                lag++
-            ) {
-                const isPeak =
-                    correlations[lag] > correlations[lag - 1] &&
-                    correlations[lag] >= correlations[lag + 1];
-
-                if (!isPeak) {
-                    continue;
-                }
-
-                const confidence =
-                    correlations[lag] /
-                    (correlations[0] / size);
-
-                if (confidence < 0.3) {
-                    continue;
-                }
-
-                // Convert the repeating period into Hz.
-                return sampleRate / lag;
-            }
-
-            return null;
-        }
-
-        function stopMic() {
-            cancelAnimationFrame(animationId);
-
-            if (microphoneStream) {
-                microphoneStream.getTracks().forEach(track => {
-                    track.stop();
-                });
-
-                microphoneStream = null;
-            }
-
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-
-            frequencyDisplay.textContent = "Frequency: -- Hz";
-            noteDisplay.textContent = "Note: --";
-            statusDisplay.textContent = "Microphone is off.";
-        }
-    </script>
-</body>
-
-</html>
+body{font:16px system-ui,sans-serif;margin:2rem;max-width:900px}button,select,input{font:inherit;margin:.25rem;padding:.4rem}nav{display:flex;gap:.5rem;border-bottom:1px solid #aaa;margin:1rem 0}nav button[aria-selected=true]{font-weight:bold;border-bottom:3px solid}section[hidden]{display:none}
+/* Keep the existing semicircle and gradient. The gauge is larger and its needle is thinner. */
+#semicircle{position:relative;width:min(360px,86vw);height:180px;box-sizing:border-box;margin:2.5rem auto 0;border-top:10px solid transparent;border-left:8px solid transparent;border-right:8px solid transparent;border-radius:270px 270px 0 0;background:linear-gradient(#fff,#fff) padding-box,radial-gradient(circle at top center,#3ce18b,#3f3c6b,#ea3c50) border-box}
+#pointer{position:absolute;bottom:0;left:calc(50% - 4px);width:8px;height:84%;background:greenyellow;transform-origin:bottom center;transform:rotate(0);border-radius:100% 100% 10px 10px;transition:transform .12s linear;z-index:2}#hub{position:absolute;bottom:-9px;left:calc(50% - 8px);width:16px;height:16px;background:greenyellow;border-radius:50%;z-index:3}#gaugeReadout{position:absolute;bottom:24px;left:0;width:100%;text-align:center;z-index:4}#gaugeScale{position:absolute;top:4px;left:6px;right:6px;display:flex;justify-content:space-between;font-size:.8rem}
+.flat{color:blue}.sharp{color:red}.good{color:green}.grand-staff{width:290px;margin:1rem auto}.staff{position:relative;height:92px;margin:0 0 8px 0}.staff-lines{position:absolute;left:40px;right:0;top:12px;height:65px;background:repeating-linear-gradient(to bottom,#222 0 1px,transparent 1px 16px)}.clef{position:absolute;left:0;top:20px;font-size:2rem;line-height:1}.staff-note,.user-note{position:absolute;transform:translate(-50%,-50%);width:15px;height:10px;border-radius:50%;background:#111;z-index:1}.user-note{left:82%;width:14px;height:10px;border:1px solid currentColor}.accidental,.user-accidental{position:absolute;transform:translate(-50%,-50%);font-size:1.1rem}.accidental{left:calc(62% - 17px)}.user-accidental{left:calc(82% - 17px)}.ledger,.user-ledger{position:absolute;width:34px}.ledger{left:calc(62% - 17px)}.user-ledger{left:calc(82% - 17px)}.ledger span,.user-ledger span{position:absolute;left:0;width:100%;border-top:1px solid #222}.user-ledger span{border-color:currentColor}.card,.chain-card{text-align:center;padding:1rem;border:1px solid #bbb;max-width:420px;margin:1rem auto}.chain-card{display:inline-block;vertical-align:top;width:250px}.chain-card .grand-staff{transform:scale(.78);transform-origin:top center;height:155px;margin:.5rem auto}.chain-card .mini-note{position:absolute;left:62%;width:15px;height:10px;border-radius:50%;background:#111;transform:translate(-50%,-50%)}.chain-card .mini-sharp{position:absolute;left:calc(62% - 17px);transform:translate(-50%,-50%)}.chain-card .mini-ledger{position:absolute;left:calc(62% - 17px);width:34px}.chain-card .mini-ledger span{position:absolute;left:0;width:100%;border-top:1px solid #222}
+</style></head><body>
+<h1>Pitch Getter</h1><nav role="tablist"><button role="tab" aria-selected="true" data-tab="pitch">Pitcher</button><button role="tab" aria-selected="false" data-tab="single">Single flashcards</button><button role="tab" aria-selected="false" data-tab="chained">Chained notes</button></nav>
+<section id="pitch"><h2>Live pitch</h2><button data-mic-toggle aria-pressed="false">Start microphone</button><p data-mic-status>Microphone is off.</p><p id="frequency">Frequency: -- Hz</p>
+<div id="semicircle"><div id="gaugeScale"><span>−50¢ flat</span><span>in tune</span><span>+50¢ sharp</span></div><div id="pointer"></div><div id="hub"></div><div id="gaugeReadout"><strong id="liveNote">Sing a pitch</strong><div id="deviation">-- cents</div></div></div>
+</section>
+<section id="single" hidden><h2>Single-note flashcards</h2><button data-mic-toggle aria-pressed="false">Start microphone</button><p data-mic-status>Microphone is off.</p><p id="learnInfo" data-learn-info>Find your singable range before practicing.</p><div class="range-setup"><h3>Set your range</h3><button data-range-action="low">Record lowest note</button> <button data-range-action="high" disabled>Record highest note</button><p data-range-status>Range not measured.</p><p data-range-notes></p></div><label>Mode <select id="mode"><option value="learn">Learn new notes</option><option value="easy">Easy review</option><option value="hard">Hard review</option></select></label> <label id="learnCountWrap">New notes this round <input id="learnCount" type="number" min="1" max="12" value="3"></label> <button id="beginCards">Start</button>
+<div class="range-setup"><h3>Progress and data</h3><button id="exportCsv">Export CSV</button><label>Import CSV <input id="importCsv" type="file" accept=".csv,text/csv"></label><button id="wipeData">Wipe saved data</button><p id="dataStatus"></p><h4>Notes to practice most</h4><ol id="hardestNotes"><li>No difficulty data yet.</li></ol></div>
+<div class="card"><div id="cardPrompt">Choose a mode and start.</div><p>Target note: black · Your sung note: blue flat, red sharp, green in tune</p><div class="grand-staff"><div class="staff" data-staff="treble"><span class="clef" aria-label="Treble clef">𝄞</span><div class="staff-lines"></div><div class="ledger" hidden></div><span class="accidental" hidden></span><div class="staff-note" hidden></div><div class="user-ledger" hidden></div><span class="user-accidental" hidden></span><div class="user-note" hidden></div></div><div class="staff" data-staff="bass"><span class="clef" aria-label="Bass clef">𝄢</span><div class="staff-lines"></div><div class="ledger" hidden></div><span class="accidental" hidden></span><div class="staff-note" hidden></div><div class="user-ledger" hidden></div><span class="user-accidental" hidden></span><div class="user-note" hidden></div></div></div><p id="cardPitchResult">Start the microphone to see your sung note on the staff.</p><button id="playTone" hidden>🔊 Play note</button><p id="cardFeedback"></p><button id="cardAction" hidden></button></div></section>
+<section id="chained"><h2>Chained notes</h2><button data-mic-toggle aria-pressed="false">Start microphone</button><p data-mic-status>Microphone is off.</p><div class="range-setup"><h3>Set your range</h3><button data-range-action="low">Record lowest note</button> <button data-range-action="high" disabled>Record highest note</button><p data-range-status>Range not measured.</p><p data-range-notes></p></div><p>Create a short phrase, sing it after the count-in, then review the pitch of each note.</p><label>Tempo <input id="tempo" type="number" min="40" max="220" value="90"> BPM</label> <label>Notes <input id="chainLength" type="number" min="2" max="12" value="4"></label> <label>Phrase <select id="chainType"><option value="same">Same note, varied rhythms</option><option value="different">Different notes, varied rhythms</option></select></label> <button id="makeChain">Create phrase</button><div id="chainPhrase"></div><button id="recordChain" disabled>Record phrase</button><p id="chainStatus"></p><div id="chainResults"></div></section>
+<script>
+(()=>{
+const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'],$=s=>document.querySelector(s);let ctx=null,stream=null,raf=0,analyser=null,samples=null,smoothed=null,history=[],candidate=null,candidateFrames=0,lastFrame=0;
+let range=null,lowValues=[],highValues=[],capture=null,learned=new Set(),hardest={},target=null,attempts=0,chain=[],correctSince=0,wrongSince=0,wrongMidi=null,wrongCounted=false,cardLocked=false,cardAdvanceTimer=0,challengeTimer=0,challengeDeadline=0,cardStage='practice',newNotesLearned=[],learnGoal=3;
+const DATA_KEY='pitchGetterProgressV1';
+const noteName=m=>names[((m%12)+12)%12]+' '+(Math.floor(m/12)-1);
+function saveProgress(){try{localStorage.setItem(DATA_KEY,JSON.stringify({range,learned:[...learned],hardest,learnGoal:+$('#learnCount').value||learnGoal}))}catch(error){$('#dataStatus').textContent='Could not save progress in this browser.'}}
+function loadProgress(){try{const saved=JSON.parse(localStorage.getItem(DATA_KEY)||'null');if(!saved)return;if(saved.range&&Number.isFinite(saved.range.low)&&Number.isFinite(saved.range.high))range=saved.range;if(Array.isArray(saved.learned))learned=new Set(saved.learned.map(Number).filter(Number.isFinite));if(saved.hardest&&typeof saved.hardest==='object')hardest=saved.hardest;if(saved.learnGoal)$('#learnCount').value=saved.learnGoal;if(range){document.querySelectorAll('[data-range-action="high"]').forEach(b=>b.disabled=false);setRangeStatus(`Saved range: ${noteName(range.low)} to ${noteName(range.high)}.`);showLearned()}}catch(error){$('#dataStatus').textContent='Saved progress could not be read.'}renderHardest()}
+function recordNoteResult(midi,result,errorCents=0){const stats=hardest[midi]||(hardest[midi]={attempts:0,misses:0,successes:0,failedTests:0,totalErrorCents:0});stats.attempts++;stats.totalErrorCents+=Math.abs(errorCents);if(result==='success')stats.successes++;else{stats.misses++;if(result==='failedTest')stats.failedTests++}saveProgress();renderHardest()}
+function renderHardest(){const list=$('#hardestNotes');if(!list)return;const rows=Object.entries(hardest).filter(([,s])=>s.misses>0).sort((a,b)=>b[1].misses-a[1].misses||(b[1].totalErrorCents/Math.max(1,b[1].attempts))-(a[1].totalErrorCents/Math.max(1,a[1].attempts))).slice(0,8);list.innerHTML=rows.length?rows.map(([m,s])=>`<li>${noteName(+m)} — ${s.misses} misses, ${Math.round(s.totalErrorCents/Math.max(1,s.attempts))}¢ average error</li>`).join(''):'<li>No difficulty data yet.</li>'}
+function exportCsv(){const rows=[['type','midi','note','attempts','misses','successes','failedTests','totalErrorCents','rangeLow','rangeHigh']];if(range)rows.push(['range','','','','','','','',range.low,range.high]);for(const midi of [...learned].sort((a,b)=>a-b))rows.push(['learned',midi,noteName(midi),'','','','','','','']);for(const [midi,s] of Object.entries(hardest))rows.push(['difficulty',midi,noteName(+midi),s.attempts||0,s.misses||0,s.successes||0,s.failedTests||0,s.totalErrorCents||0,'','']);const csv=rows.map(row=>row.map(cell=>String(cell??'').replaceAll('"','""')).map(cell=>/[",\n]/.test(cell)?`"${cell}"`:cell).join(',')).join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='pitch-getter-progress.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$('#dataStatus').textContent='Progress exported to CSV.'}
+async function importCsv(file){try{const lines=(await file.text()).replace(/^\uFEFF/,'').split(/\r?\n/).slice(1).filter(Boolean);let importedRange=null;for(const line of lines){const [type,midi,note,attemptsText,missesText,successesText,failedText,errorText,lowText,highText]=line.split(',');if(type==='range'&&Number.isFinite(+lowText)&&Number.isFinite(+highText))importedRange={low:+lowText,high:+highText};else if(type==='learned'&&Number.isFinite(+midi))learned.add(+midi);else if(type==='difficulty'&&Number.isFinite(+midi)){const prior=hardest[midi]||{},incoming={attempts:+attemptsText||0,misses:+missesText||0,successes:+successesText||0,failedTests:+failedText||0,totalErrorCents:+errorText||0};hardest[midi]={attempts:Math.max(prior.attempts||0,incoming.attempts),misses:Math.max(prior.misses||0,incoming.misses),successes:Math.max(prior.successes||0,incoming.successes),failedTests:Math.max(prior.failedTests||0,incoming.failedTests),totalErrorCents:Math.max(prior.totalErrorCents||0,incoming.totalErrorCents)}}}if(importedRange)range=importedRange;if(range){document.querySelectorAll('[data-range-action="high"]').forEach(b=>b.disabled=false);setRangeStatus(`Imported range: ${noteName(range.low)} to ${noteName(range.high)}.`);showLearned()}else document.querySelectorAll('[data-range-notes]').forEach(p=>p.textContent=[...learned].sort((a,b)=>a-b).map(noteName).join(', '));saveProgress();renderHardest();$('#dataStatus').textContent='CSV progress imported and merged.'}catch(error){$('#dataStatus').textContent='Could not read that CSV file.'}}
+document.querySelectorAll('nav [role=tab]').forEach(b=>b.onclick=()=>{const current=document.querySelector('nav [aria-selected="true"]');if(current!==b)stopMic();document.querySelectorAll('nav [role=tab]').forEach(x=>x.setAttribute('aria-selected',x===b));document.querySelectorAll('body>section').forEach(s=>s.hidden=s.id!==b.dataset.tab)});
+function updateMicControls(message){document.querySelectorAll('[data-mic-toggle]').forEach(b=>{b.textContent=stream?'Stop microphone':'Start microphone';b.setAttribute('aria-pressed',String(!!stream))});document.querySelectorAll('[data-mic-status]').forEach(p=>p.textContent=message)}
+async function startMic(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});if(!ctx||ctx.state==='closed')ctx=new AudioContext();await ctx.resume();analyser=ctx.createAnalyser();analyser.fftSize=4096;ctx.createMediaStreamSource(stream).connect(analyser);samples=new Float32Array(analyser.fftSize);updateMicControls('Listening…');tick();return true}catch(e){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;updateMicControls('Microphone error: '+e.message);return false}}
+function stopMic(){cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(ctx)ctx.close();ctx=null;analyser=null;smoothed=null;history=[];resetCardHold();updateMicControls('Microphone is off.');document.querySelectorAll('.user-note,.user-accidental,.user-ledger').forEach(el=>el.hidden=true);if(target!==null)$('#cardPitchResult').textContent='Microphone is off. Start it to see your sung note on the staff.'}
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)stopMic()});
+document.querySelectorAll('[data-mic-toggle]').forEach(b=>b.onclick=()=>stream?stopMic():startMic());
+// Use the autocorrelation detector from the supplied working example.
+function detectPitch(samples,sampleRate){const size=samples.length;let energy=0;for(let i=0;i<size;i++)energy+=samples[i]*samples[i];const rms=Math.sqrt(energy/size);if(rms<.01)return null;
+ const minFrequency=70,maxFrequency=1000,minLag=Math.floor(sampleRate/maxFrequency),maxLag=Math.min(Math.floor(sampleRate/minFrequency),Math.floor(size/2)),correlations=new Float32Array(maxLag+1);
+ for(let i=0;i<size;i++)correlations[0]+=samples[i]*samples[i];
+ for(let lag=minLag;lag<=maxLag;lag++){let sum=0,count=0;for(let i=0;i<size-lag;i++){sum+=samples[i]*samples[i+lag];count++}correlations[lag]=sum/count}
+ for(let lag=minLag+1;lag<maxLag;lag++){const isPeak=correlations[lag]>correlations[lag-1]&&correlations[lag]>=correlations[lag+1];if(!isPeak)continue;const confidence=correlations[lag]/(correlations[0]/size);if(confidence<.3)continue;return sampleRate/lag}return null}
+function tick(){if(!analyser)return;if(performance.now()-lastFrame<32){raf=requestAnimationFrame(tick);return}lastFrame=performance.now();analyser.getFloatTimeDomainData(samples);let hz=detectPitch(samples,ctx.sampleRate);if(hz){let midi=69+12*Math.log2(hz/440);history.push(midi);if(history.length>5)history.shift();let sorted=[...history].sort((a,b)=>a-b),med=sorted[Math.floor(sorted.length/2)];if(smoothed===null){smoothed=med;candidate=med}else if(Math.abs(med-smoothed)>.65){if(candidate!==null&&Math.abs(med-candidate)<.25)candidateFrames++;else{candidate=med;candidateFrames=1}if(candidateFrames>=3){smoothed=med;candidateFrames=0}}else{candidate=med;candidateFrames=0;smoothed=smoothed*.72+med*.28}
+ $('#frequency').textContent=`Frequency: ${hz.toFixed(1)} Hz`;showPitch(smoothed);updateCardPitch(smoothed);if(capture)capture.push(smoothed)}else{resetCardHold();if(!capture){$('#frequency').textContent='Frequency: -- Hz';if(target!==null)$('#cardPitchResult').textContent='No pitch detected — sing your target note.'}}raf=requestAnimationFrame(tick)}
+function showPitch(m){let rounded=Math.round(m),cents=(m-rounded)*100,readout=$('#liveNote'),amount=Math.min(1,Math.abs(cents)/25),start=[0,128,0],end=cents<0?[0,0,255]:[255,0,0],rgb=start.map((v,i)=>Math.round(v+(end[i]-v)*amount));readout.textContent=`${noteName(rounded)} · MIDI ${rounded}`;readout.style.color=`rgb(${rgb.join(',')})`;$('#deviation').textContent=`${cents>=0?'+':''}${cents.toFixed(0)} cents${Math.abs(cents)<=25?' · in tune':''}`;$('#pointer').style.transform=`rotate(${Math.max(-50,Math.min(50,cents))*1.25}deg)`}
+function resetCardHold(){correctSince=0;wrongSince=0;wrongMidi=null;wrongCounted=false}
+function updateCardPitch(m){if(target===null||cardLocked)return;const learning=$('#mode').value==='learn';if(learning&&!['practice','test'].includes(cardStage))return;let actual=Math.round(m),delta=(m-target)*100,color=Math.abs(delta)<=25?'green':delta<0?'blue':'red';placeMarker(actual,'user',color);$('#cardPitchResult').textContent=`Your pitch: ${noteName(actual)} · MIDI ${actual} · ${delta>=0?'+':''}${delta.toFixed(0)} cents vs target ${noteName(target)}`;$('#cardPitchResult').style.color=color;let now=performance.now(),remaining=Math.max(0,(challengeDeadline-now)/1000);if(Math.abs(delta)<=25){wrongSince=0;wrongMidi=null;wrongCounted=false;if(!correctSince)correctSince=now;let held=(now-correctSince)/1000;$('#cardFeedback').className='good';$('#cardFeedback').textContent=learning&&cardStage==='test'?`Match it now — ${remaining.toFixed(1)} seconds left (${Math.min(held,1).toFixed(1)} / 1.0 sec held)`:`Good — hold it steady (${Math.min(held,1).toFixed(1)} / 1.0 sec)`;if(held>=1)completeCard()}else{correctSince=0;if(wrongMidi!==actual){wrongMidi=actual;wrongSince=now;wrongCounted=false}$('#cardFeedback').className='';if(learning&&cardStage==='test')$('#cardFeedback').textContent=`${remaining.toFixed(1)} seconds left — adjust toward ${noteName(target)}.`;if(!wrongCounted&&now-wrongSince>=700){wrongCounted=true;attempts++;recordNoteResult(target,'miss',delta);if(!learning)$('#cardFeedback').textContent=`Detected ${noteName(actual)}. Keep adjusting toward ${noteName(target)}.`;if($('#mode').value==='hard'&&attempts>=3)$('#playTone').hidden=false}}}
+function completeCard(){if(cardLocked)return;correctSince=0;if($('#mode').value==='learn'&&cardStage==='practice'){cardStage='ready';$('#playTone').hidden=false;$('#cardAction').hidden=false;$('#cardAction').textContent='Test yourself';$('#cardFeedback').className='good';$('#cardFeedback').textContent='Great match. When ready, click “Test yourself” to try it without the tone.';return}if($('#mode').value==='learn'&&cardStage==='test'){cardLocked=true;clearTimeout(challengeTimer);learned.add(target);recordNoteResult(target,'success',smoothed===null?0:(smoothed-target)*100);if(!newNotesLearned.includes(target))newNotesLearned.push(target);showLearned();cardStage='learned';$('#playTone').hidden=true;$('#cardAction').hidden=false;$('#cardAction').textContent=newNotesLearned.length>=learnGoal?'Start mixed review':`Next new note (${newNotesLearned.length}/${learnGoal})`;$('#cardFeedback').className='good';$('#cardFeedback').textContent=`Good job! ${noteName(target)} is learned. ${newNotesLearned.length} of ${learnGoal} new notes learned.`;return}cardLocked=true;recordNoteResult(target,'success',smoothed===null?0:(smoothed-target)*100);cardStage='completed';$('#cardAction').hidden=false;$('#cardAction').textContent='Next note';$('#cardFeedback').className='good';$('#cardFeedback').textContent=`Good job! You matched ${noteName(target)}. Click “Next note” when you're ready.`}
+function startSelfTest(){if(cardStage!=='ready')return;cardStage='test';attempts=0;correctSince=0;wrongSince=0;wrongCounted=false;challengeDeadline=performance.now()+5000;$('#playTone').hidden=true;$('#cardAction').hidden=true;$('#cardFeedback').textContent='You have 5 seconds to match and hold the note.';challengeTimer=setTimeout(()=>{if(cardStage!=='test')return;recordNoteResult(target,'failedTest',smoothed===null?0:(smoothed-target)*100);cardStage='practice';correctSince=0;$('#playTone').hidden=false;$('#cardAction').hidden=true;$('#cardFeedback').className='';$('#cardFeedback').textContent='Time is up. Practice the note and try the test again.'},5000)}
+function setRangeStatus(message){document.querySelectorAll('[data-range-status]').forEach(p=>p.textContent=message)}
+async function recordEdge(which){if(!stream){setRangeStatus('Starting microphone…');if(!await startMic())return}let data=[];capture=data;setRangeStatus(`Hold your ${which==='low'?'lowest':'highest'} comfortable note for 3 seconds…`);setTimeout(()=>{capture=null;let vals=data.filter(Number.isFinite);if(vals.length<8){setRangeStatus('No steady pitch found. Try again and hold the note clearly.');stopMic();return}vals.sort((a,b)=>a-b);let m=vals[Math.floor(vals.length/2)];(which==='low'?lowValues:highValues).push(m);if(which==='low'){document.querySelectorAll('[data-range-action="low"]').forEach(b=>b.textContent='Record lowest again');document.querySelectorAll('[data-range-action="high"]').forEach(b=>b.disabled=false);setRangeStatus(`Low note saved (${noteName(Math.round(m))}). Now record your highest note.`);stopMic();return}let lo=Math.min(...lowValues),hi=Math.max(...highValues);range={low:Math.ceil(lo),high:Math.floor(hi)};if(range.low>range.high){range.low=range.high=Math.round((lo+hi)/2)}let center=(lo+hi)/2,cs=available().filter(n=>n%12===0),first=cs.length?cs.reduce((a,b)=>Math.abs(b-center)<Math.abs(a-center)?b:a):Math.round(center);learned=new Set([first]);if(first>range.low)learned.add(first-1);if(first<range.high)learned.add(first+1);setRangeStatus(`Range saved: ${noteName(range.low)} to ${noteName(range.high)}. Starting at the C nearest its middle.`);showLearned();stopMic()},3000)}
+function showLearned(){document.querySelectorAll('[data-range-notes]').forEach(p=>p.textContent=`Learned notes: ${[...learned].sort((a,b)=>a-b).map(noteName).join(', ')}`);document.querySelectorAll('[data-learn-info]').forEach(p=>p.textContent=`Measured range: ${noteName(range.low)} to ${noteName(range.high)}. Learn notes outward from the middle.`);saveProgress();renderHardest()}
+document.querySelectorAll('[data-range-action]').forEach(b=>b.onclick=()=>recordEdge(b.dataset.rangeAction));
+function available(){return range?Array.from({length:range.high-range.low+1},(_,i)=>range.low+i):[]}
+function placeMarker(midi,kind,color){const natural=[0,0,1,1,2,3,3,4,4,5,5,6],chroma=((midi%12)+12)%12,octave=Math.floor(midi/12)-1,diatonic=octave*7+natural[chroma],clef=midi<60?'bass':'treble',reference=clef==='treble'?30:18,step=diatonic-reference,y=76-step*8;document.querySelectorAll('[data-staff]').forEach(staff=>{const active=staff.dataset.staff===clef,note=staff.querySelector(kind==='target'?'.staff-note':'.user-note'),ledger=staff.querySelector(kind==='target'?'.ledger':'.user-ledger'),accidental=staff.querySelector(kind==='target'?'.accidental':'.user-accidental');note.hidden=!active;ledger.hidden=!active;accidental.hidden=!active||![1,3,6,8,10].includes(chroma);if(!active)return;note.style.top=`${y}px`;note.style.background=color;note.style.color=color;accidental.textContent='♯';accidental.style.top=`${y}px`;accidental.style.color=color;ledger.style.color=color;let ys=[];for(let line=92;line<=y;line+=16)ys.push(line);for(let line=-4;line>=y;line-=16)ys.push(line);ledger.innerHTML=ys.map(line=>`<span style="top:${line}px"></span>`).join('')})}
+function placeGrandStaff(midi){document.querySelectorAll('.user-note,.user-accidental,.user-ledger').forEach(el=>el.hidden=true);placeMarker(midi,'target','#111')}
+function nextCard(){clearTimeout(cardAdvanceTimer);clearTimeout(challengeTimer);target=null;cardLocked=false;resetCardHold();$('#cardAction').hidden=true;if(!range){$('#cardPrompt').textContent='Measure your range in any tab first.';return}let mode=$('#mode').value,all=available(),pool=mode==='learn'?all.filter(n=>!learned.has(n)&&[...learned].some(k=>Math.abs(k-n)===1)):all.filter(n=>learned.has(n));if(mode==='learn'&&!pool.length){if(newNotesLearned.length){cardStage='learned';$('#cardPrompt').textContent='You have reached the end of the available new notes.';$('#cardAction').textContent='Start mixed review';$('#cardAction').hidden=false}else $('#cardPrompt').textContent='No adjacent new note is available in your measured range.';return}if(!pool.length){$('#cardPrompt').textContent='No notes learned yet. Choose Learn new notes.';return}target=pool[Math.floor(Math.random()*pool.length)];attempts=0;cardStage=mode==='learn'?'practice':'review';$('#cardPrompt').textContent=`${mode==='learn'?'Learn':'Review'}: sing ${noteName(target)}`;placeGrandStaff(target);if(smoothed!==null)updateCardPitch(smoothed);$('#playTone').hidden=mode==='hard';$('#cardFeedback').textContent=mode==='learn'?'Match the note, then test yourself without the tone. Hold within 25 cents for one second.':'Sing and hold within 25 cents for one second to continue.'}
+$('#beginCards').onclick=()=>{newNotesLearned=[];learnGoal=Math.max(1,Math.min(12,+$('#learnCount').value||3));saveProgress();nextCard()};
+$('#mode').onchange=()=>{$('#learnCountWrap').hidden=$('#mode').value!=='learn'};$('#mode').onchange();
+$('#cardAction').onclick=()=>{if(cardStage==='ready'){startSelfTest();return}if(cardStage==='completed'){nextCard();return}if(cardStage==='learned'){if(newNotesLearned.length>=learnGoal||!available().some(n=>!learned.has(n)&&[...learned].some(k=>Math.abs(k-n)===1))){$('#mode').value='easy';$('#learnCountWrap').hidden=true;cardStage='review';nextCard()}else nextCard()}};
+function playMidi(midi,duration=1.5){if(!ctx)ctx=new AudioContext();if(ctx.state==='suspended')ctx.resume();let o=ctx.createOscillator(),g=ctx.createGain(),start=ctx.currentTime;o.frequency.value=440*2**((midi-69)/12);g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(.2,start+.04);g.gain.setValueAtTime(.2,start+Math.max(.05,duration-.3));g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g).connect(ctx.destination);o.start(start);o.stop(start+duration+.01)}
+$('#playTone').onclick=()=>playMidi(target,1.5);
+function miniStaffMarkup(midi){const natural=[0,0,1,1,2,3,3,4,4,5,5,6],chroma=((midi%12)+12)%12,octave=Math.floor(midi/12)-1,diatonic=octave*7+natural[chroma],clef=midi<60?'bass':'treble',step=diatonic-(clef==='treble'?30:18),y=76-step*8,ledgerLines=[];for(let line=92;line<=y;line+=16)ledgerLines.push(line);for(let line=-4;line>=y;line-=16)ledgerLines.push(line);return `<div class="grand-staff mini-grand">${['treble','bass'].map(type=>{const active=type===clef;return `<div class="staff"><span class="clef">${type==='treble'?'𝄞':'𝄢'}</span><div class="staff-lines"></div>${active?`<span class="mini-note" style="top:${y}px"></span>${[1,3,6,8,10].includes(chroma)?`<span class="mini-sharp" style="top:${y}px">♯</span>`:''}<div class="mini-ledger">${ledgerLines.map(line=>`<span style="top:${line}px"></span>`).join('')}</div>`:''}</div>`}).join('')}</div>`}
+$('#makeChain').onclick=()=>{if(!range){$('#chainStatus').textContent='Measure your range first.';return}let all=[...learned];if(!all.length)all=available();let length=Math.max(2,Math.min(12,+$('#chainLength').value||4)),same=all[Math.floor(Math.random()*all.length)],rhythms=[4,2,1,.5];chain=Array.from({length},()=>({m:$('#chainType').value==='same'?same:all[Math.floor(Math.random()*all.length)],beats:rhythms[Math.floor(Math.random()*rhythms.length)]}));$('#chainPhrase').innerHTML=chain.map((n,i)=>`<article class="chain-card"><h3>Note ${i+1}</h3>${miniStaffMarkup(n.m)}<strong>${noteName(n.m)}</strong><p>${({4:'Whole',2:'Half',1:'Quarter',.5:'Eighth'})[n.beats]} note · ${n.beats} beat${n.beats===1?'':'s'}</p><button data-chain-tone="${i}">🔊 Hear this note</button></article>`).join('');document.querySelectorAll('[data-chain-tone]').forEach(b=>b.onclick=()=>{const n=chain[+b.dataset.chainTone];playMidi(n.m,n.beats*60/(+$('#tempo').value||90))});$('#recordChain').disabled=false;$('#chainStatus').textContent=`Tempo ${$('#tempo').value} BPM. Each note is shown as a flashcard above.`;$('#chainResults').innerHTML=''};
+$('#recordChain').onclick=async()=>{if(!stream){$('#chainStatus').textContent='Starting microphone…';if(!await startMic())return}let bpm=Math.max(40,Math.min(220,+$('#tempo').value||90)),beatMs=60000/bpm,totalBeats=chain.reduce((s,n)=>s+n.beats,0),values=[];capture=values;$('#chainStatus').textContent=`Recording phrase for ${(totalBeats*beatMs/1000).toFixed(1)} seconds…`;let starts=[],sum=0;for(const n of chain){starts.push(sum);sum+=n.beats}setTimeout(()=>{capture=null;$('#chainResults').innerHTML=chain.map((n,i)=>{let a=Math.floor(starts[i]/totalBeats*values.length),b=Math.floor((starts[i]+n.beats)/totalBeats*values.length),v=values.slice(a,b).filter(Number.isFinite);if(!v.length)return `<p>Expected ${noteName(n.m)} — no pitch detected</p>`;v.sort((x,y)=>x-y);let cents=(v[Math.floor(v.length/2)]-n.m)*100,cls=Math.abs(cents)<=20?'good':cents<0?'flat':'sharp';return `<p class="${cls}">Expected ${noteName(n.m)} — ${cents>=0?'+':''}${cents.toFixed(0)} cents</p>`}).join('');$('#chainStatus').textContent='Phrase complete. Pitch colors show flat, in-tune, or sharp.';stopMic()},totalBeats*beatMs)};
+$('#exportCsv').onclick=exportCsv;$('#importCsv').onchange=e=>{if(e.target.files[0])importCsv(e.target.files[0]);e.target.value=''};
+$('#wipeData').onclick=()=>{if(!confirm('Wipe saved range, learned notes, and difficulty history?'))return;localStorage.removeItem(DATA_KEY);range=null;learned=new Set();hardest={};lowValues=[];highValues=[];newNotesLearned=[];document.querySelectorAll('[data-range-action="low"]').forEach(b=>b.textContent='Record lowest note');document.querySelectorAll('[data-range-action="high"]').forEach(b=>b.disabled=true);setRangeStatus('Range not measured.');document.querySelectorAll('[data-range-notes]').forEach(p=>p.textContent='');document.querySelectorAll('[data-learn-info]').forEach(p=>p.textContent='Find your singable range before practicing.');$('#cardPrompt').textContent='Choose a mode and start.';$('#dataStatus').textContent='Saved progress wiped.';renderHardest()};
+loadProgress();
+})();
+</script></body></html>
