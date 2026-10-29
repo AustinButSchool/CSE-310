@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Choose Notes · Pitch Practice</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="index.html">Pitch Practice</a><nav class="site-nav"><a href="index.html">Pitcher</a><a href="practice.html" class="active">Practice</a></nav><details class="account-menu"><summary aria-label="Open account menu"></summary><div class="menu-items"><a href="notes.html?group=learning">New Notes</a><a href="notes.html?group=learned">Learned Notes</a><a href="notes.html?group=mastered">Mastered Notes</a><button type="button" data-export-csv>Export CSV</button><label class="menu-file">Import CSV<input type="file" accept=".csv,text/csv" data-import-csv hidden></label><button type="button" data-clear-data>Clear Data</button></div></details></header>
+<main><div class="screen-frame"><section class="screen plain"><div class="choose-grid">
+<h1 class="choose-title">Choose Notes To Practice</h1>
+<p class="choose-hint" data-empty-hint hidden>You haven't learned any notes yet. Start with <a href="learn-note.html">Learn Notes</a>.</p>
+<section class="note-group"><h2>Learning</h2><div data-note-list="learning"></div><p class="small-copy" data-learn-full hidden>Can't Learn New Notes Until More Notes Are Learned</p></section>
+<section class="note-group"><h2>Learned</h2><div data-note-list="learned"></div><div class="almost"><div data-note-list="almost"></div><div class="label">Almost Mastered</div></div></section>
+<section class="note-group"><h2>Mastered</h2><div data-note-list="mastered"></div></section>
+<div class="right-col"><section class="queue-box"><h2>Queued Notes</h2><ol data-queue></ol><p class="queue-count"><span data-queue-count>0</span>/5</p><button type="button" class="link-btn" data-clear-queue>Clear selection</button></section>
+<div class="choose-actions"><a class="button back" href="practice.html">Back</a><button type="button" class="primary" data-ready>Okay, Ready!</button></div></div>
+</div></section></div></main>
+<script src="routes.js"></script>
+<script src="pages.js"></script>
+</body></html>

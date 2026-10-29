@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flashcard Review · Pitch Practice</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="index.html">Pitch Practice</a><nav class="site-nav"><a href="index.html">Pitcher</a><a href="practice.html" class="active">Practice</a></nav><details class="account-menu"><summary aria-label="Open account menu"></summary><div class="menu-items"><a href="notes.html?group=learning">New Notes</a><a href="notes.html?group=learned">Learned Notes</a><a href="notes.html?group=mastered">Mastered Notes</a><button type="button" data-export-csv>Export CSV</button><label class="menu-file">Import CSV<input type="file" accept=".csv,text/csv" data-import-csv hidden></label><button type="button" data-clear-data>Clear Data</button></div></details></header>
+<main><div class="screen-frame deck-frame"><div class="deck"><div class="stack left" data-stack="left"></div><article class="flashcard" data-card></article><div class="stack right" data-stack="right"></div></div></div>
+<p class="deck-counts" data-counts></p><div class="page-actions"><a class="button back" href="practice.html">End practice</a></div></main>
+<script src="routes.js"></script>
+<script src="pages.js"></script>
+</body></html>

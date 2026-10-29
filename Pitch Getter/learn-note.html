@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Learn a Note · Pitch Practice</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="index.html">Pitch Practice</a><nav class="site-nav"><a href="index.html">Pitcher</a><a href="practice.html" class="active">Practice</a></nav><details class="account-menu"><summary aria-label="Open account menu"></summary><div class="menu-items"><a href="notes.html?group=learning">New Notes</a><a href="notes.html?group=learned">Learned Notes</a><a href="notes.html?group=mastered">Mastered Notes</a><button type="button" data-export-csv>Export CSV</button><label class="menu-file">Import CSV<input type="file" accept=".csv,text/csv" data-import-csv hidden></label><button type="button" data-clear-data>Clear Data</button></div></details></header>
+<main><div class="screen-frame"><section class="screen learn-card" data-learn>
+<h1 class="learn-title">Note: <span data-current-note>C4</span></h1>
+<div data-staff></div>
+<div class="learn-copy"><p>This is Note <span data-current-note>C4</span>.<br>It sounds like this: <button type="button" class="icon-btn" data-hear aria-label="Hear this note"></button></p><p class="feedback" data-feedback>Listen, find its place on the staff, then test your pitch.</p><p class="range-text" data-range-text></p><button type="button" class="link-btn" data-redo-range>Redo my range</button></div>
+<div class="note-actions"><a class="button back" href="practice.html" data-back>Back</a><button type="button" data-test>Test It!</button><button type="button" class="primary" data-ready>Okay, Ready!</button></div>
+</section>
+<section class="screen range-card" data-range hidden><h1>Find Your Range</h1><p>Before learning notes, let's find the notes you can comfortably sing. Click a button, then hold that note steadily for 3 seconds.</p>
+<div class="range-buttons"><button type="button" data-range-low>Record lowest note</button><button type="button" data-range-high>Record highest note</button></div>
+<p class="feedback" data-range-status>Range not measured yet.</p><p data-range-result></p>
+<div class="note-actions"><a class="button back" href="practice.html">Back</a><button type="button" class="primary" data-range-go disabled>Save range &amp; start</button></div></section></div></main>
+<script src="routes.js"></script>
+<script src="pages.js"></script>
+</body></html>
